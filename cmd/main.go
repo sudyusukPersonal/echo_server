@@ -1,11 +1,8 @@
 package main
 
 import (
-	"errors"
 	"log"
 	"net/http"
-
-	"gorm.io/gorm"
 
 	"github.com/sudyusukPersonal/echo_server/database"
 	"github.com/sudyusukPersonal/echo_server/models"
@@ -26,31 +23,22 @@ func main() {
 	})
 
 	e.POST("/new_user", func(c echo.Context) error {
-
-		//本当はフロントのjsonをバインドする
-		email := "sample44@gmail.com"
-		var user models.User
-		err := database.DB.Where("email = ?", email).First(&user).Error
-		if err != nil {
-				if errors.Is(err, gorm.ErrRecordNotFound) {
-						// レコードが見つからなかった場合の処理
-						err := models.NewUser(database.DB)
-						if err != nil {
-							log.Println(err)
-							return c.String(http.StatusInternalServerError, "Internal Server Error")
-					}
-				} else {
-						// その他のエラー処理
-						return c.String(http.StatusInternalServerError, "Internal Server Error")
-				}
-		} else {
-				// レコードが見つかった場合の処理
-				return c.String(http.StatusBadRequest, "アドレス重複")
-		}
-    return c.NoContent(http.StatusOK)
+    email := "newemailthird@gmail.com"
+    emailExists, err := models.EmailExists(email)
+    if err != nil {
+        log.Println(err)
+        return c.String(http.StatusInternalServerError, "Internal Server Error")
+    }
+    if emailExists {
+        return c.String(http.StatusBadRequest, "アドレス重複")
+    }
+    if err := models.NewUser(database.DB, email); err != nil {
+        log.Println(err)
+        return c.String(http.StatusInternalServerError, "Internal Server Error")
+    }
+    return c.NoContent(http.StatusNoContent)
 })
 
-	// サーバーをポート8080で起動
-	e.Logger.Fatal(e.Start(":8080"))
 
+	e.Logger.Fatal(e.Start(":8080"))
 }
